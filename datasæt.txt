@@ -1,0 +1,10 @@
+https://www.energidataservice.dk/tso-electricity/productionconsumptionsettlement
+https://www.energidataservice.dk/tso-electricity/consumptionpergridarea
+
+DMI: Se mailen i denne folder.
+
+
+
+I specialet er brugt:
+- ElectricityConsumption fra Energidataservice. Datasættet skal erstattes af ProductionConsumptionSettlement
+- DMI data med støj. Datasættet skal erstattet af det rensede datasæt

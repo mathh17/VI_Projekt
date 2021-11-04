@@ -1,0 +1,12 @@
+kontruer data.
+lav data. 
+Hvordan bliver der allerede lavet prognoser?
+Hvad skal der til at man kan lave en prognose.
+1. Hvad gør Energinet allerede og hvordan vil det bruges og er det nogle faldgrupper.(Måske af to rundter)
+2. Hvordan applier jeg det til mit projekt og er det relevant?
+3. Research lignende projekter.
+4. Data exploration.
+5. Proof of concept, enten bare DMI-delen, eller som helhed. 
+6. Hvordan er andvendeligheden ift de interviews der blev lavet og er det stadig relevant/brugbart. 
+
+
