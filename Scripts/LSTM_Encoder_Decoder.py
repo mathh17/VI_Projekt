@@ -5,7 +5,7 @@ import requests
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scripts import Holidays_calc as hc
+import Holidays_calc as hc
 import tensorflow as tf
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
@@ -121,21 +121,17 @@ def create_dataset(df, n_deterministic_features,
 
 
 #%%
-
-created_df = create_dataset(pred_data_scaled,26,48,24,32)
+created_df = create_dataset(pred_data_scaled,28,48,24,32)
 
 #%%
 # Dividing the complete set into train and test
 X_train, X_test = train_test_split(pred_data_scaled, test_size=0.2, random_state=42)
 X_train, X_val = train_test_split(X_train, test_size=0.1, random_state=42)
 
-#X_train = X_train.reshape(X_train.shape[0],X_train.shape[1],1)
-#X_test = X_test.reshape(X_test.shape[0],X_test.shape[1],1)
-
 #%%
-X_train_windowed = create_dataset(X_train,26,48,24,32)
-X_val_windowed = create_dataset(X_val,26,48,24,32)
-X_test_windowed = create_dataset(X_test,26,48,24,1)
+X_train_windowed = create_dataset(X_train,28,48,24,32)
+X_val_windowed = create_dataset(X_val,28,48,24,32)
+X_test_windowed = create_dataset(X_test,28,48,24,1)
 
 
 #%%
@@ -145,7 +141,7 @@ past_inputs = tf.keras.Input(shape=(48,29), name='past_inputs')
 encoder = layers.LSTM(Latent_dims, return_state=True)
 encoder_outputs, state_h, state_c = encoder(past_inputs)
 
-future_inputs = tf.keras.Input(shape=(24,26), name='future_inputs')
+future_inputs = tf.keras.Input(shape=(24,28), name='future_inputs')
 decoder_lstm = layers.LSTM(Latent_dims, return_sequences=True)
 non_com_model = decoder_lstm(future_inputs, initial_state=[state_h,state_c])
 
@@ -159,7 +155,7 @@ loss = tf.keras.losses.Huber()
 model.compile(loss=loss,optimizer=optimizer,metrics=['mse'])
 #%%
 # Fit the model to our data
-history = model.fit(X_train_windowed ,epochs=10, validation_data=(X_val_windowed))
+history = model.fit(X_train_windowed ,epochs=20, validation_data=(X_val_windowed))
 # %%
 #scores to evaluate how the model performs on the test data
 score = model.evaluate(X_test_windowed,verbose=0)
@@ -176,4 +172,7 @@ epochs = range(1,len(loss_vals)+1)
 plt.plot(epochs, loss_vals, 'bo')
 plt.plot(epochs, val_loss, 'b')
 plt.show
+# %%
+# Saving the model to be used later
+model.save('sripts/LSTM_Encoder_Decoder_Model_20Epochs')
 # %%
