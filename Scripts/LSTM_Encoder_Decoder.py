@@ -18,7 +18,7 @@ from sklearn import preprocessing
 # read the files from the datafolder containing data fra DK2
 # changing the path to the datafolder
 #path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts\data\stations_data_dk2'
-path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts\data\stations_data_dk2'
+path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_Projekt\Scripts\data\stations_data_dk2'
 
 os.chdir(path)
 
@@ -47,7 +47,7 @@ dk2_mean.head()
 #%%
 # Read Enernginet Pickle Data
 # Change back path
-old_path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts'
+old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_Projekt\Scripts'
 os.chdir(old_path)
 df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
 df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
@@ -66,13 +66,15 @@ conc_data.dropna(inplace=True)
 
 #%%
 #Calling the holiday function to build a column for if its a holiday or not
-holidays = []
-for i in range(len(conc_data)):
-    is_holiday = hc.get_date_type(conc_data.loc[i,'time'])
-    holidays.append(is_holiday)
-conc_data['is_holiday'] = holidays
+def holidays(df):
+    holidays = []
+    for i in range(len(df)):
+        is_holiday = hc.get_date_type(df.loc[i,'time'])
+        holidays.append(is_holiday)
+    return holidays
 #%%
 #Take data from the concatenated dataset and put it into label data and train data
+conc_data['is_holiday'] = holidays(conc_data)
 pred_data = conc_data[['temp_mean_past1h','radia_glob_past1h']]
 cat_holiday = pd.get_dummies(conc_data['is_holiday'])
 pred_data['is_not_holiday'] = cat_holiday[0]
@@ -174,5 +176,27 @@ plt.plot(epochs, val_loss, 'b')
 plt.show
 # %%
 # Saving the model to be used later
-model.save('sripts/LSTM_Encoder_Decoder_Model_20Epochs')
+#model.save('LSTM_Encoder_Decoder_Model_20Epochs')
 # %%
+loaded_model = keras.models.load_model('LSTM_Encoder_Decoder_Model_20Epochs')
+
+#%%
+stations_concat_df['time'] = pd.to_datetime(stations_concat_df['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
+stations_concat_df['is_holiday'] = holidays(stations_concat_df)
+cat_holiday = pd.get_dummies(stations_concat_df['is_holiday'])
+stations_concat_df['is_not_holiday'] = cat_holiday[0]
+stations_concat_df['is_holiday'] = cat_holiday[1]
+#%%
+stations_concat_df['time'] = stations_concat_df['time'].dt.hour
+cat_time = pd.get_dummies(stations_concat_df['time'])
+stations_concat_df = stations_concat_df.join(cat_time)
+stations_concat_df = stations_concat_df.drop(columns=['predicted_ahead','time'])
+# %%
+scaler_forecast = preprocessing.MinMaxScaler()
+scaler_forecast.fit(stations_concat_df)
+stations_scaled = pd.DataFrame(scaler_forecast.transform(stations_concat_df),columns=stations_concat_df.columns, index=stations_concat_df.index)
+#%%
+stations_windowed = create_dataset(stations_scaled,28,48,24,1)
+
+# %%
+model.predict(stations_windowed)
