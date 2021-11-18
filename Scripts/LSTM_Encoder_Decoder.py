@@ -5,7 +5,7 @@ import requests
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import Holidays_calc as hc
+from scripts import Holidays_calc as hc
 import tensorflow as tf
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
@@ -17,7 +17,9 @@ from sklearn import preprocessing
 #%%
 # read the files from the datafolder containing data fra DK2
 # changing the path to the datafolder
-path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts\data\stations_data_dk2'
+#path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts\data\stations_data_dk2'
+path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts\data\stations_data_dk2'
+
 os.chdir(path)
 
 temp_conc_data = pd.DataFrame(columns=['time'])
@@ -45,7 +47,7 @@ dk2_mean.head()
 #%%
 # Read Enernginet Pickle Data
 # Change back path
-old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts'
+old_path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts'
 os.chdir(old_path)
 df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
 df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
@@ -162,7 +164,7 @@ history = model.fit(X_train_windowed ,epochs=10, validation_data=(X_val_windowed
 #scores to evaluate how the model performs on the test data
 score = model.evaluate(X_test_windowed,verbose=0)
 print('loss value: '+str(score[0]))
-print('MSE: '+score[1])
+print('MSE: '+ str(score[1]))
 
 #%%
 # Plot the test loss and validation loss to check for overfitting
