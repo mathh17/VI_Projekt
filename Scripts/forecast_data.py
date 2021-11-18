@@ -110,7 +110,7 @@ Fører det sammen i et datasæt og omregner temperaturen fra Kelvin Celsius
 """
 parquet_content = egress.download_dmi_file(lon=12.55, lat=55.7,
                                             from_date='2020-01-01', 
-                                            to_date='2020-12-31')
+                                            to_date='2020-05-31')
 data = pd.read_parquet(BytesIO(parquet_content))
 data_temp_val = get_station_temp_val(data)
 data_radi_val = get_station_radi_val(data)

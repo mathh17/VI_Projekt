@@ -5,8 +5,8 @@ import requests
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 # %%
-date_start = datetime(2015,1,1)
-date_end = datetime(2020,1,1)
+date_start = datetime(2020,1,1)
+date_end = datetime(2020,5,31)
 url = """https://api.energidataservice.dk/datastore_search_sql?sql=SELECT * FROM "productionconsumptionsettlement" WHERE "HourUTC" >= '""" + date_start.strftime("%Y-%m-%dT%H:%M:%S") + """' AND "HourUTC" < '""" + date_end.strftime("%Y-%m-%dT%H:%M:%S") + """' """
 api_call = requests.get(url)
 df = pd.DataFrame(api_call.json()["result"]["records"]).drop(columns = ["_id", "_full_text"])
@@ -17,9 +17,9 @@ data_df = df[['HourUTC','PriceArea']].copy()
 data_df['Con'] = df['GrossConsumptionMWh'] - df['PowerToHeatMWh'] - df['LocalPowerSelfConMWh'] - df['SolarPowerSelfConMWh'] - df['GridLossTransmissionMWh'] - df['GridLossInterconnectorsMWh'] - df['GridLossDistributionMWh']#subtract consumption from electric boilers
 df_DK1 = data_df[data_df.PriceArea == 'DK1'] #split into DK1 and DK2
 df_DK2 = data_df[data_df.PriceArea == 'DK2']
-pkl_name1 = "data/dk1_data_2015_2020.pkl"
+pkl_name1 = "data/dk1_data_2020_2020_maj.pkl"
 df_DK1.to_pickle(pkl_name1)
-pkl_name2 = "data/dk2_data_2015_2020.pkl"
+pkl_name2 = "data/dk2_data_2020_2020_maj.pkl"
 df_DK2.to_pickle(pkl_name2)
 print('done')
 #%%

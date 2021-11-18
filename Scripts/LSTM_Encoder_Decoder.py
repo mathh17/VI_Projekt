@@ -53,6 +53,8 @@ df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
 df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
 df_DK1_2015_2020 = pd.read_pickle("data/dk1_data_2015_2020.pkl")
 df_DK2_2015_2020 = pd.read_pickle("data/dk2_data_2015_2020.pkl")
+df_DK2_maj = pd.read_pickle("data/dk2_data_2020_2020_maj.pkl")
+df_DK1_maj = pd.read_pickle("data/dk1_data_2020_2020_maj.pkl")
 df_DK1 = pd.concat([df_DK1_2010_2015,df_DK1_2015_2020], ignore_index=True)
 df_DK2 = pd.concat([df_DK2_2010_2015,df_DK2_2015_2020], ignore_index=True)
 
@@ -123,12 +125,18 @@ def create_dataset(df, n_deterministic_features,
 
 
 #%%
-created_df = create_dataset(pred_data_scaled,28,48,24,32)
+#created_df = create_dataset(pred_data_scaled,28,48,24,32)
 
 #%%
 # Dividing the complete set into train and test
-X_train, X_test = train_test_split(pred_data_scaled, test_size=0.2, random_state=42)
-X_train, X_val = train_test_split(X_train, test_size=0.1, random_state=42)
+#X_train, X_test = train_test_split(pred_data_scaled, test_size=0.2, random_state=42)
+#X_train, X_val = train_test_split(X_train, test_size=0.1, random_state=42)
+train_size = 65099
+test_size = train_size + 17528
+val_size = test_size + 5011
+X_train = pred_data_scaled[:train_size]
+X_test = pred_data_scaled[train_size:test_size]
+X_val = pred_data_scaled[test_size:val_size]
 
 #%%
 X_train_windowed = create_dataset(X_train,28,48,24,32)
@@ -178,9 +186,10 @@ plt.show
 # Saving the model to be used later
 #model.save('LSTM_Encoder_Decoder_Model_20Epochs')
 # %%
-loaded_model = keras.models.load_model('LSTM_Encoder_Decoder_Model_20Epochs')
+loaded_model = keras.models.load_model('LSTM_Encoder_Decoder_Model_20Epochs.h5')
 
 #%%
+stations_concat_df.dropna(inplace=True)
 stations_concat_df['time'] = pd.to_datetime(stations_concat_df['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
 stations_concat_df['is_holiday'] = holidays(stations_concat_df)
 cat_holiday = pd.get_dummies(stations_concat_df['is_holiday'])
@@ -196,7 +205,8 @@ scaler_forecast = preprocessing.MinMaxScaler()
 scaler_forecast.fit(stations_concat_df)
 stations_scaled = pd.DataFrame(scaler_forecast.transform(stations_concat_df),columns=stations_concat_df.columns, index=stations_concat_df.index)
 #%%
-stations_windowed = create_dataset(stations_scaled,28,48,24,1)
+stations_windowed_out = create_dataset(stations_scaled,28,48,24,1)
 
 # %%
-model.predict(stations_windowed)
+loaded_model.predict(X_test_windowed,stations_windowed)
+# %%
