@@ -17,7 +17,7 @@ from sklearn import preprocessing
 #%%
 # read the files from the datafolder containing data fra DK2
 # changing the path to the datafolder
-path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts\data\stations_data_dk2'
+path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts\data\stations_data_dk2'
 os.chdir(path)
 
 temp_conc_data = pd.DataFrame(columns=['time'])
@@ -45,7 +45,7 @@ dk2_mean.head()
 #%%
 # Read Enernginet Pickle Data
 # Change back path
-old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts'
+old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts'
 os.chdir(old_path)
 df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
 df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
