@@ -161,7 +161,7 @@ for station_row in dk2_stations:
             dmi_data = pd.merge(dmi_data, df, on='time', how='outer')
 
     pkl_name = "data/"+station_row+"dmi_data.pkl"
-    dmi_data.to_pickle(pkl_name)
+    dmi_data.to_pickle(pkl_name, protocol=3)
 # %%
 tetst = pd.read_pickle('data/stations_data_dk2/06183dmi_data.pkl')
 

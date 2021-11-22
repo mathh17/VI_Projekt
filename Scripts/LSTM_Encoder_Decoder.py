@@ -70,8 +70,8 @@ conc_data.dropna(inplace=True)
 #Calling the holiday function to build a column for if its a holiday or not
 def holidays(df):
     holidays = []
-    for i in range(len(df)):
-        is_holiday = hc.get_date_type(df.loc[i,'time'])
+    for i, row in df.iterrows():
+        is_holiday = hc.get_date_type(row['time'])
         holidays.append(is_holiday)
     return holidays
 #%%
@@ -148,24 +148,27 @@ X_test_windowed = create_dataset(X_test,28,48,24,1)
 # Setting up more layed LSTM which uses the encoding
 Latent_dims = 16
 past_inputs = tf.keras.Input(shape=(48,29), name='past_inputs')
-encoder = layers.LSTM(Latent_dims, return_state=True)
+encoder = layers.LSTM(Latent_dims, return_state=True, dropout=0.2)
 encoder_outputs, state_h, state_c = encoder(past_inputs)
 
 future_inputs = tf.keras.Input(shape=(24,28), name='future_inputs')
-decoder_lstm = layers.LSTM(Latent_dims, return_sequences=True)
+decoder_lstm = layers.LSTM(Latent_dims, return_sequences=True, dropout=0.2)
 non_com_model = decoder_lstm(future_inputs, initial_state=[state_h,state_c])
 
-non_com_model = layers.Dense(Latent_dims,activation='relu')(non_com_model)
-non_com_model = layers.Dense(Latent_dims,activation='relu')(non_com_model)
-output = layers.Dense(1,activation='relu')(non_com_model)
+non_com_model = layers.Dense(Latent_dims,activation='elu')(non_com_model)
+non_com_model = layers.Dropout(0.2)(non_com_model)
+non_com_model = layers.Dense(Latent_dims,activation='elu')(non_com_model)
+non_com_model = layers.Dropout(0.2)(non_com_model)
+output = layers.Dense(1,activation='elu')(non_com_model)
 
 model = tf.keras.models.Model(inputs=[past_inputs,future_inputs], outputs=output)
 optimizer = tf.keras.optimizers.Adam()
 loss = tf.keras.losses.Huber()
 model.compile(loss=loss,optimizer=optimizer,metrics=['mse'])
+model.summary()
 #%%
 # Fit the model to our data
-history = model.fit(X_train_windowed ,epochs=20, validation_data=(X_val_windowed))
+history = model.fit(X_train_windowed ,epochs=10, validation_data=(X_val_windowed))
 # %%
 #scores to evaluate how the model performs on the test data
 score = model.evaluate(X_test_windowed,verbose=0)
