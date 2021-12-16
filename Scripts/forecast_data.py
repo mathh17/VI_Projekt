@@ -1,9 +1,8 @@
 #%%
 import pandas as pd
 from io import BytesIO
-import osiris
-from osiris.apis.egress import Egress
-from osiris.core.azure_client_authorization import ClientAuthorization
+from osiris.egress import Egress
+from osiris.azure_client_authorization import ClientAuthorization
 from configparser import ConfigParser
 #%%
 config = ConfigParser()
