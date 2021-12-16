@@ -121,8 +121,8 @@ fig.tight_layout()
 plt.show()
 # %%
 y_plot = pd.DataFrame()
-y_plot['exact_values'] = y_val[0:100]
-y_plot['predicted_values'] = y_val_hat[0:100]
+y_plot['exact_values'] = y_val
+y_plot['predicted_values'] = y_val_hat
 y_plot = y_plot.sort_index()
 fig = plt.figure(figsize=(6, 6))
 plt.subplot(1, 1, 1)

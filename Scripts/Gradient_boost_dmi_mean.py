@@ -25,7 +25,7 @@ from sklearn.ensemble import AdaBoostRegressor
 #%%
 # read the files from the datafolder containing data fra DK2
 # changing the path to the datafolder
-path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts\data\stations_data_dk2'
+path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts\data\stations_data_dk2'
 os.chdir(path)
 
 temp_conc_data = pd.DataFrame(columns=['time'])
@@ -53,7 +53,7 @@ dk2_mean.head()
 #%%
 # Read Enernginet Pickle Data
 # Change back 
-old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts'
+old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_projekt\Scripts'
 os.chdir(old_path)
 df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
 df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
@@ -71,12 +71,14 @@ conc_data = pd.merge(dk2_mean, df_DK2, on='time', how='outer')
 conc_data.dropna(inplace=True)
 
 #%%
-holidays = []
-for i in range(len(conc_data)):
-    is_holiday = hc.get_date_type(conc_data.loc[i,'time'])
-    holidays.append(is_holiday)
-conc_data['is_holiday'] = holidays
-
+def holidays(df):
+    holidays = []
+    for i, row in df.iterrows():
+        is_holiday = hc.get_date_type(row['time'])
+        holidays.append(is_holiday)
+    return holidays
+#%%
+conc_data['is_holiday'] = holidays(conc_data)
 #%%
 #Dividing train test and validation.
 values = conc_data['Con']
@@ -164,9 +166,9 @@ y_plot = y_plot.sort_index()
 fig = plt.figure(figsize=(6, 6))
 plt.subplot(1, 1, 1)
 plt.title('Predicts vs Exact values')
-plt.plot(range(y_plot.index), y_plot['exact_values'], 'r-',
+plt.plot(range(7008), y_plot['exact_values'], 'r-',
          label='Exact values')
-plt.plot(range(y_plot.index), y_plot['predicted_values'], 'b-',
+plt.plot(range(7008), y_plot['predicted_values'], 'b-',
          label='Precited Values')
 plt.legend(loc='upper right')
 #plt.xlabel('Boosting Iterations')

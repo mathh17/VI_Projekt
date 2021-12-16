@@ -49,21 +49,15 @@ dk2_mean.head()
 # Change back path
 old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_Projekt\Scripts'
 os.chdir(old_path)
-df_DK1_2010_2015 = pd.read_pickle("data/dk1_data_2010_2015.pkl")
-df_DK2_2010_2015 = pd.read_pickle("data/dk2_data_2010_2015.pkl")
-df_DK1_2015_2020 = pd.read_pickle("data/dk1_data_2015_2020.pkl")
-df_DK2_2015_2020 = pd.read_pickle("data/dk2_data_2015_2020.pkl")
-df_DK2_maj = pd.read_pickle("data/dk2_data_2020_2020_maj.pkl")
-df_DK1_maj = pd.read_pickle("data/dk1_data_2020_2020_maj.pkl")
-df_DK1 = pd.concat([df_DK1_2010_2015,df_DK1_2015_2020], ignore_index=True)
-df_DK2 = pd.concat([df_DK2_2010_2015,df_DK2_2015_2020], ignore_index=True)
+df_el_data = pd.read_pickle("data/jaegerspris_el_data.pkl")
 
 #%%
 #Merge data into one DF, on the hour of observations
 dk2_mean['time'] = pd.to_datetime(dk2_mean['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
-df_DK2['HourUTC'] = pd.to_datetime(df_DK2['HourUTC'],format='%Y-%m-%dT%H:%M:%S', utc=True)
-df_DK2 = df_DK2.rename(columns={'HourUTC':'time'})
-conc_data = pd.merge(dk2_mean, df_DK2, on='time', how='outer')
+df_el_data['HourUTC'] = pd.to_datetime(df_el_data['HourUTC'],format='%Y-%m-%dT%H:%M:%S', utc=True)
+df_el_data = df_el_data.rename(columns={'HourUTC':'time', 'HourlySettledConsumption':'Con'})
+conc_data = pd.merge(dk2_mean, df_el_data, on='time', how='outer')
+conc_data.dropna(inplace=True)
 
 #%%
 #Calling the holiday function to build a column for if its a holiday or not
@@ -76,14 +70,14 @@ def holidays(df):
 
 #%%
 def data_encoder(df): 
-    df.dropna(inplace=True)
     df['time'] = pd.to_datetime(df['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
     df['is_holiday'] = holidays(df)
     return df
 #%%
 #Take data from the concatenated dataset and put it into label data and train data
-data_encoder(conc_data)
-pred_data = conc_data[['temp_mean_past1h','radia_glob_past1h']]
+pred_data = pd.DataFrame(conc_data[['temp_mean_past1h','radia_glob_past1h']])
+conc_data = data_encoder(conc_data)
+pred_data['is_holiday'] = conc_data['is_holiday']
 conc_data['time'] = conc_data['time'].dt.hour
 cat_time = pd.get_dummies(conc_data['time'])
 pred_data = pred_data.join(cat_time)
@@ -120,8 +114,8 @@ def create_dataset(df, n_deterministic_features,
 
     # Extracting past features + deterministic future + labels
     data = data.map(lambda k: ((k[:-forecast_size],
-                                k[-forecast_size:, -n_deterministic_features:]),
-                               k[-forecast_size:, 0]))
+                                k[-forecast_size:, 0:n_deterministic_features]),
+                               k[-forecast_size:, -1]))
 
     return data.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 #%%
