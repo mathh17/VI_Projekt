@@ -18,7 +18,7 @@ from sklearn import preprocessing
 # read the files from the datafolder containing data fra DK2
 # changing the path to the datafolder
 #path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\Scripts\data\stations_data_dk2'
-path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_Projekt\Scripts\data\stations_data_dk2'
+path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts\data\stations_data_dk2'
 
 os.chdir(path)
 
@@ -47,7 +47,7 @@ dk2_mean.head()
 #%%
 # Read Enernginet Pickle Data
 # Change back path
-old_path = r'C:\Users\MTG\OneDrive - Energinet.dk\Skrivebord\VI_projekt\VI_Projekt\Scripts'
+old_path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts'
 os.chdir(old_path)
 df_el_data = pd.read_pickle("data/jaegerspris_el_data.pkl")
 
@@ -58,7 +58,8 @@ df_el_data['HourUTC'] = pd.to_datetime(df_el_data['HourUTC'],format='%Y-%m-%dT%H
 df_el_data = df_el_data.rename(columns={'HourUTC':'time', 'HourlySettledConsumption':'Con'})
 conc_data = pd.merge(dk2_mean, df_el_data, on='time', how='outer')
 conc_data.dropna(inplace=True)
-
+conc_data = conc_data.iloc[::-1]
+conc_data = conc_data.sort_values(['time'])
 #%%
 #Calling the holiday function to build a column for if its a holiday or not
 def holidays(df):
@@ -120,9 +121,9 @@ def create_dataset(df, n_deterministic_features,
     return data.batch(batch_size).prefetch(tf.data.experimental.AUTOTUNE)
 #%%
 # Dividing the complete set into train and test
-train_size = 60000
-val_size = train_size + 10000
-test_size = val_size + 17590
+train_size = 25000
+val_size = train_size + 4000
+test_size = val_size + 6063
 
 X_train = pred_data_scaled[:train_size]
 X_test = pred_data_scaled[val_size:test_size]
@@ -154,11 +155,11 @@ output = layers.Dense(1,activation='elu')(non_com_model)
 model = tf.keras.models.Model(inputs=[past_inputs,future_inputs], outputs=output)
 optimizer = tf.keras.optimizers.SGD(momentum=0.9, lr=0.001)
 loss = tf.keras.losses.Huber()
-model.compile(loss=loss,optimizer=optimizer,metrics=['mae'])
+model.compile(loss=loss,optimizer=optimizer,metrics=['mse'])
 model.summary()
 #%%
 # Fit the model to our data
-history = model.fit(X_train_windowed ,epochs=10, validation_data=(X_val_windowed))
+history = model.fit(X_train_windowed ,epochs=250, validation_data=(X_val_windowed))
 # %%
 #scores to evaluate how the model performs on the test data
 score = model.evaluate(X_test_windowed,verbose=0)
@@ -177,10 +178,50 @@ plt.plot(epochs, val_loss, 'b')
 plt.show
 # %%
 # Saving the model to be used later
-#model.save('LSTM_Encoder_Decoder_Model_20Epochs')
+model.save('LSTM_250Epochs')
 # %%
 loaded_model = keras.models.load_model('LSTM_Encoder_Decoder_Model_250Epochs.h5')
+#%%
+#%%
 
+def get_station_temp_val(station):
+    values = []
+    time = []
+    predicted = []
+    for index, row  in station.iterrows():
+        if row['weather_type'] == 'temperatur_2m' and row['predicted_ahead']  in [1,2,3]:
+            values.append(row['value'])
+            time.append(row['Date'])
+            predicted.append(row['predicted_ahead'])
+        
+    stations_df = pd.DataFrame(columns=['temp_mean_1hr','predicted_ahead','time'])
+    stations_df['temp_mean_1hr'] = values
+    stations_df['time'] = time
+    stations_df['predicted_ahead'] = predicted
+    return stations_df
+
+def get_station_radi_val(station):
+    values = []
+    time = []
+    predicted = []
+    for index, row  in station.iterrows():
+        if row['weather_type'] == 'radiation_hour' and row['predicted_ahead'] in [1,2,3]:
+            values.append(row['value'])
+            time.append(row['Date'])
+            predicted.append(row['predicted_ahead'])
+    stations_df = pd.DataFrame(columns=['radiation_hour','predicted_ahead','time'])
+    stations_df['radiation_hour'] = values
+    stations_df['time'] = time
+    stations_df['predicted_ahead'] = predicted
+    return stations_df
+"""
+Henter forecast data fra stationen: Jægersborg.
+Jægersborg tilhører grid companiet Radius Elnet. 
+Fører det sammen i et datasæt og omregner temperaturen fra Kelvin Celsius
+"""
+forecast_data = pd.read_parquet("data/forecast_data_jan_maj")
+data_temp_val = get_station_temp_val(forecast_data)
+data_radi_val = get_station_radi_val(forecast_data)
 #%%
 data_temp_val = data_encoder(data_temp_val)
 data_radi_val = data_encoder(data_radi_val)
