@@ -94,7 +94,7 @@ print(X_train.shape, X_test.shape, X_val.shape, y_train.shape, y_test.shape, y_v
 # initializing the model, 
 # fitting it to the data,
 # predicting on the validation data.
-loss = ['squared_error']#,'absolute_error','huber']
+loss = ['huber']#,'absolute_error','huber']
 learning_rate = [0.1]#,0.1,0.2,1]
 n_estimators = [500]#,50,100,200]
 criterion = ['friedman_mse']#,'mse']

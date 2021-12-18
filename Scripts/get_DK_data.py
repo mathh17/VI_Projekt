@@ -46,3 +46,4 @@ plt.show()
 # %%
 plt.plot(weekly_con)
 plt.show()
+# %%
