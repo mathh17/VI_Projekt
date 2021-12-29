@@ -10,6 +10,9 @@ import tensorflow as tf
 from datetime import datetime, timedelta
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_percentage_error
+from sklearn.metrics import mean_absolute_error
+
 from tensorflow import keras
 from tensorflow.keras import layers
 from sklearn import preprocessing
@@ -34,7 +37,6 @@ for file in os.listdir():
     if 'radia_glob_past1h' in df.columns:
         radi_conc_data = pd.merge(radi_conc_data,df[['time','radia_glob_past1h']],on='time',how='outer', suffixes=(['old','_{}'.format(file_name)]))
 
-#%%
 # takes all the columns and calculates the mean for each row. which gives us a mean value for all stations at the given time.
 temp_conc_data['mean'] = temp_conc_data.iloc[:,1:12].sum(axis=1) / 11
 radi_conc_data['mean'] = radi_conc_data.iloc[:,1:7].sum(axis=1) / 6
@@ -44,14 +46,13 @@ dk2_mean['temp_mean_past1h'] = temp_conc_data['mean']
 dk2_mean['radia_glob_past1h'] = radi_conc_data['mean']
 dk2_mean.head()
 
-#%%
 # Read Enernginet Pickle Data
 # Change back path
 old_path = r'C:\Users\oeste\OneDrive\Uni\DS_3_semester\VI_Projekt\Scripts'
 os.chdir(old_path)
 df_el_data = pd.read_pickle("data/jaegerspris_el_data.pkl")
+el_data_2021 = pd.read_pickle("data/jaegerspris_el_data_2021.pkl")
 
-#%%
 #Merge data into one DF, on the hour of observations
 dk2_mean['time'] = pd.to_datetime(dk2_mean['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
 df_el_data['HourUTC'] = pd.to_datetime(df_el_data['HourUTC'],format='%Y-%m-%dT%H:%M:%S', utc=True)
@@ -69,7 +70,6 @@ def holidays(df):
         holidays.append(is_holiday)
     return holidays
 
-#%%
 def data_encoder(df): 
     df['time'] = pd.to_datetime(df['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
     df['is_holiday'] = holidays(df)
@@ -176,23 +176,55 @@ epochs = range(1,len(loss_vals)+1)
 plt.plot(epochs, loss_vals, 'bo')
 plt.plot(epochs, val_loss, 'b')
 plt.show
+
+#%%
+windows = 150
+test_pred = []
+for i, data in enumerate(X_test_windowed.take(windows)):
+    (past, future),truth = data
+    test_pred.append(loaded_model.predict((past,future)))
+#%%
+predicitions_unload = []
+for i in range(0,windows):
+  for l in range(0,24):
+    predicitions_unload.append(test_pred[i][0][l][0])
+
+range_len = windows * 24
+test_plot = pd.DataFrame()
+test_plot['exact_values'] = X_test['Con'][1:range_len+1]
+test_plot['predicted_values'] = predicitions_unload
+test_plot = test_plot.reset_index()
+fig = plt.figure(figsize=(6, 6))
+plt.subplot(1, 1, 1)
+plt.title('Predicts vs Exact values')
+plt.plot(np.arange(0,range_len), test_plot['exact_values'], 'r-',
+         label='Exact values')
+plt.plot(np.arange(0,range_len), test_plot['predicted_values'], 'b-',
+         label='Precited Values')
+plt.legend(loc='upper right')
+#plt.xlabel('Boosting Iterations')
+plt.ylabel('Consumption')
+fig.tight_layout()
+plt.show()
+
 # %%
 # Saving the model to be used later
-model.save('LSTM_250Epochs')
+model.save('LSTM_250Epochs.h5')
 # %%
-loaded_model = keras.models.load_model('LSTM_Encoder_Decoder_Model_250Epochs.h5')
-#%%
+loaded_model = keras.models.load_model('LSTM_250Epochs')
 #%%
 
 def get_station_temp_val(station):
     values = []
     time = []
     predicted = []
+    counter = 0
     for index, row  in station.iterrows():
-        if row['weather_type'] == 'temperatur_2m' and row['predicted_ahead']  in [1,2,3]:
+        if row['weather_type'] == 'temperatur_2m' and row['predicted_ahead']  == counter%49:
             values.append(row['value'])
             time.append(row['Date'])
             predicted.append(row['predicted_ahead'])
+            counter+=1
         
     stations_df = pd.DataFrame(columns=['temp_mean_1hr','predicted_ahead','time'])
     stations_df['temp_mean_1hr'] = values
@@ -204,11 +236,13 @@ def get_station_radi_val(station):
     values = []
     time = []
     predicted = []
+    counter = 0
     for index, row  in station.iterrows():
-        if row['weather_type'] == 'radiation_hour' and row['predicted_ahead'] in [1,2,3]:
+        if row['weather_type'] == 'radiation_hour' and row['predicted_ahead'] == counter%49:
             values.append(row['value'])
             time.append(row['Date'])
             predicted.append(row['predicted_ahead'])
+            counter+=1
     stations_df = pd.DataFrame(columns=['radiation_hour','predicted_ahead','time'])
     stations_df['radiation_hour'] = values
     stations_df['time'] = time
@@ -222,80 +256,74 @@ Fører det sammen i et datasæt og omregner temperaturen fra Kelvin Celsius
 forecast_data = pd.read_parquet("data/forecast_data_jan_maj")
 data_temp_val = get_station_temp_val(forecast_data)
 data_radi_val = get_station_radi_val(forecast_data)
-#%%
+
 data_temp_val = data_encoder(data_temp_val)
 data_radi_val = data_encoder(data_radi_val)
 
-#%%
 df_DK2_maj_con = pd.DataFrame()
-df_DK2_maj_con['time'] = df_DK2_maj['HourUTC']
-df_DK2_maj_con['Con'] = df_DK2_maj['Con']
+df_DK2_maj_con['time'] = el_data_2021['HourUTC']
+df_DK2_maj_con['Con'] = el_data_2021['HourlySettledConsumption']
 df_DK2_maj_con['time'] = pd.to_datetime(df_DK2_maj_con['time'],format='%Y-%m-%dT%H:%M:%S', utc=True)
 data_temp_val = pd.merge(df_DK2_maj_con,data_temp_val, on='time', how='outer')
 data_temp_val
-#%%
+
 data_temp_val['time'] = data_temp_val['time'].dt.hour
 data_radi_val['time'] = data_radi_val['time'].dt.hour
-data_temp_val['time'] = data_temp_val['time'].add(1)
-#%%
+
 radi_val = data_radi_val['radiation_hour']
 stations_concat_df = data_temp_val.join(radi_val)
 stations_concat_df['temp_mean_1hr'] = stations_concat_df['temp_mean_1hr'].add(-273.15)
 
-#%%
 cat_time = pd.get_dummies(stations_concat_df['time'])
 stations_concat_df = stations_concat_df.join(cat_time)
 stations_concat_df = stations_concat_df.drop(columns=['predicted_ahead','time'])
 stations_concat_df.dropna(inplace=True)
-
-# %%
-scaler_forecast = preprocessing.MinMaxScaler()
-scaler_forecast.fit(stations_concat_df)
-stations_scaled = pd.DataFrame(scaler_forecast.transform(stations_concat_df),columns=stations_concat_df.columns, index=stations_concat_df.index)
+forecast_con = pd.DataFrame(stations_concat_df['Con'])
+forecast_con = pd.DataFrame(con_scaler.transform(forecast_con))
+stations_concat_df = stations_concat_df.reindex(columns=['temp_mean_1hr',	'radiation_hour',	'is_holiday',	0,	1,	2,	3,	4,	5,	6,	7,	8,	9,	10,	11,	12,	13,	14,	15,	16,	17,	18,	19,	20,	21,	22,	23,	'Con'])
+stations_concat_df = stations_concat_df.drop(columns=['Con'])
+stations_scaled = pd.DataFrame(scaler.transform(stations_concat_df),columns=stations_concat_df.columns, index=stations_concat_df.index)
+stations_scaled['Con'] = forecast_con
 #%%
 forecast_windowed_in = create_dataset(stations_scaled,27,48,24,1)
 forecast_windowed_in
+
 #%%
-forecast_in = stations_scaled[1:49]
-forecast_in.reshape(48,48,28)
-forecast_out = stations_scaled.drop('Con', axis=1)
-forecast_out = forecast_out[48:73]
-#%%
-predicitions = []
-for i, data in enumerate(forecast_windowed_in.take(1)):
+forecast_window = 1
+forecast_pred = []
+for i, data in enumerate(forecast_windowed_in.take(forecast_window)):
     (past, future),truth = data
-    predicitions.append(loaded_model.predict((past,future)))
-
-
+    print(past[0])
+    print(future[0])
+    forecast_pred.append(loaded_model.predict((past,future)))
 
 # %%
-predictions_loaded = loaded_model.predict(forecast_in,forecast_out)
+predicitions_unload = []
+for i in range(0,forecast_window):
+  for l in range(0,24):
+    predicitions_unload.append(forecast_pred[i][0][l][0])
 
-#%%
-preds_rescaled = con_scaler.inverse_transform(predicitions[0][0])
-preds_rescaled
-# %%
-predicitions = []
-for i in range(len(preds_rescaled)):
-  predicitions.append(preds_rescaled[i][0])
-  
-  
-  # %%
-y_plot = pd.DataFrame()
-y_plot['exact_values'] = stations_concat_df['Con'][1:25]
-y_plot['predicted_values'] = preds_rescaled
-y_plot = y_plot.reset_index()
+range_len = forecast_window * 24
+test_plot = pd.DataFrame()
+test_plot['exact_values'] = stations_scaled['Con'][1:range_len+1]
+test_plot['predicted_values'] = predicitions_unload
+test_plot = test_plot.reset_index()
 fig = plt.figure(figsize=(6, 6))
 plt.subplot(1, 1, 1)
 plt.title('Predicts vs Exact values')
-plt.plot(np.arange(0,24), y_plot['exact_values'], 'r-',
+plt.plot(np.arange(0,range_len), test_plot['exact_values'], 'r-',
          label='Exact values')
-plt.plot(np.arange(0,24), y_plot['predicted_values'], 'b-',
+plt.plot(np.arange(0,range_len), test_plot['predicted_values'], 'b-',
          label='Precited Values')
 plt.legend(loc='upper right')
-#plt.xlabel('Boosting Iterations')
 plt.ylabel('Consumption')
 fig.tight_layout()
 plt.show()
-#%%
-y_plot
+# %%
+mse_forecast = mean_absolute_error(test_plot['exact_values'],test_plot['predicted_values'])
+#mse_forecast
+mean_absolute_percentage_error(test_plot['exact_values'],test_plot['predicted_values'])
+
+# %%
+mse_forecast = mean_absolute_error(test_plot['exact_values'],naive_y_val)
+mse_forecast
